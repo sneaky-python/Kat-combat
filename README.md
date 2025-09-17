@@ -24,4 +24,19 @@ Built with **HTML, CSS (Tailwind), and JavaScript**.
 - 🌑 Shadow → Void  
 - ✨ Light → Radiance  
 
+
 ---
+
+## 🕹️ How to Play
+1. Open the **home page**.  
+2. Pick your elemental Kat.  
+3. Evolve your Kat and enter battle.  
+4. Defeat your opponents to become the **ultimate Kat Champion**!  
+
+---
+
+## 🛠️ Installation
+1. Download or clone this repository:
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/kat-combat.git
+
