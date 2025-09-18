@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kat Combat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Press Start 2P", cursive;
+      text-align: center;
+      color: #fff;
+      background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1b2735);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    h1 {
+      font-size: 40px;
+      margin-top: 40px;
+      text-shadow: 0 0 15px #00f7ff, 0 0 30px #ff00ff;
+    }
+
+    h2 {
+      margin: 20px 0;
+      text-shadow: 0 0 10px #00ffae;
+    }
+
+    canvas {
+      border: 4px solid #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00f7ff, 0 0 40px #ff00ff;
+      display: block;
+      margin: auto;
+      background: #111;
+    }
+
+    .screen { display: none; }
+    .active { display: block; }
+
+    button {
+      padding: 15px 30px;
+      margin: 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: "Press Start 2P", cursive;
+      background: linear-gradient(45deg, #ff0080, #ff8c00);
+      color: #fff;
+      box-shadow: 0 0 15px #ff0080, 0 0 30px #ff8c00;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 30px #00f7ff, 0 0 60px #ff00ff;
+    }
+
+    .kat-select {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 20px;
+      gap: 20px;
+    }
+
+    .kat {
+      width: 120px;
+      height: 120px;
+      margin: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: white;
+      font-weight: bold;
+      border-radius: 16px;
+      cursor: pointer;
+      text-shadow: 0 0 5px #000;
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 0 10px #fff;
+    }
+
+    .kat:hover {
+      transform: scale(1.15) rotate(3deg);
+      box-shadow: 0 0 25px #fff, 0 0 50px #00f7ff;
+    }
+
+    #winnerText {
+      font-size: 22px;
+      text-shadow: 0 0 15px #ff0, 0 0 30px #f0f;
+    }
+  </style>
+</head>
+<body>
+  <h1>Kat Combat</h1>
+
+  <!-- Menu Screen -->
+  <div id="menuScreen" class="screen active">
+    <h2>Welcome to Kat Combat</h2>
+    <button onclick="goToCharacterSelect()">Play</button>
+  </div>
+
+  <!-- Character Select Screen -->
+  <div id="charScreen" class="screen">
+    <h2 id="selectText">Player 1: Choose Your Kat</h2>
+    <div class="kat-select" id="katSelect"></div>
+    <button onclick="backToMenu()">Back to Menu</button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="gameScreen" class="screen">
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <h2 id="winnerText"></h2>
+    <button onclick="backToMenu()">Back to Menu</button>
+  </div>
+
+  <script>
+    // Screen manager
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+    function goToCharacterSelect() { showScreen("charScreen"); }
+    function backToMenu() { window.location.reload(); }
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const winnerText = document.getElementById("winnerText");
+    const katSelect = document.getElementById("katSelect");
+    const selectText = document.getElementById("selectText");
+
+    // Kats
+    const kats = [
+      { name: "🔥 Fire", color: "red", special: "fireball", arena: "volcano" },
+      { name: "🌊 Water", color: "blue", special: "wave", arena: "ocean" },
+      { name: "🌍 Earth", color: "brown", special: "rock", arena: "forest" },
+      { name: "🌪️ Air", color: "lightgray", special: "gust", arena: "sky" },
+      { name: "⚡ Lightning", color: "yellow", special: "zap", arena: "storm" },
+      { name: "❄️ Ice", color: "cyan", special: "iceShard", arena: "frozen" },
+      { name: "🌑 Shadow", color: "purple", special: "darkBlast", arena: "darkrealm" },
+      { name: "☀️ Light", color: "white", special: "beam", arena: "temple" }
+    ];
+
+    let player1 = null, player2 = null;
+    let selectionTurn = 1;
+    let projectiles = [];
+    let arena = "default";
+
+    // Kat buttons
+    kats.forEach(kat => {
+      const div = document.createElement("div");
+      div.classList.add("kat");
+      div.style.background = kat.color;
+      div.textContent = kat.name;
+      div.onclick = () => selectKat(kat);
+      katSelect.appendChild(div);
+    });
+
+    function selectKat(kat) {
+      if (selectionTurn === 1) {
+        player1 = { ...kat, x: 100, y: 300, w: 40, h: 40, hp: 100, attacking: false };
+        selectionTurn = 2;
+        selectText.textContent = "Player 2: Choose Your Kat";
+      } else if (selectionTurn === 2) {
+        player2 = { ...kat, x: 600, y: 300, w: 40, h: 40, hp: 100, attacking: false };
+        arena = Math.random() < 0.5 ? player1.arena : player2.arena;
+        startGame();
+      }
+    }
+
+    function startGame() {
+      showScreen("gameScreen");
+      gameLoop();
+    }
+
+    const keys = {};
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => {
+      keys[e.key] = false;
+      if (e.key === "f") player1.attacking = false;
+      if (e.key === ";") player2.attacking = false;
+    });
+
+    function update() {
+      if (keys["a"]) player1.x -= 3;
+      if (keys["d"]) player1.x += 3;
+      if (keys["w"]) player1.y -= 3;
+      if (keys["s"]) player1.y += 3;
+
+      if (keys["j"]) player2.x -= 3;
+      if (keys["l"]) player2.x += 3;
+      if (keys["i"]) player2.y -= 3;
+      if (keys["k"]) player2.y += 3;
+
+      if (keys["f"] && checkCollision(player1, player2)) player2.hp -= 1;
+      if (keys[";"] && checkCollision(player2, player1)) player1.hp -= 1;
+
+      if (keys["g"]) launchProjectile(player1, 1);
+      if (keys["'"]) launchProjectile(player2, 2);
+
+      projectiles.forEach(p => {
+        p.x += p.vx;
+        if (p.owner === 1 && checkCollision(p, player2)) { player2.hp -= p.damage; p.dead = true; }
+        if (p.owner === 2 && checkCollision(p, player1)) { player1.hp -= p.damage; p.dead = true; }
+      });
+
+      projectiles = projectiles.filter(p => !p.dead);
+
+      player1.hp = Math.max(0, player1.hp);
+      player2.hp = Math.max(0, player2.hp);
+
+      if (player1.hp <= 0) { winnerText.textContent = "Player 2 Wins!"; stopGame(); }
+      if (player2.hp <= 0) { winnerText.textContent = "Player 1 Wins!"; stopGame(); }
+    }
+
+    function drawArena() {
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = "#333";
+      ctx.fillRect(0,350,canvas.width,50);
+    }
+
+    function draw() {
+      drawArena();
+      ctx.fillStyle = player1.color;
+      ctx.fillRect(player1.x, player1.y, player1.w, player1.h);
+      ctx.fillStyle = player2.color;
+      ctx.fillRect(player2.x, player2.y, player2.w, player2.h);
+      projectiles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+      });
+      ctx.fillStyle = "lime";
+      ctx.fillRect(50,20,player1.hp*2,20);
+      ctx.fillRect(500,20,player2.hp*2,20);
+    }
+
+    function checkCollision(a,b) {
+      return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+    }
+
+    function launchProjectile(player, owner) {
+      if (!player) return;
+      const dir = owner===1?1:-1;
+      projectiles.push({ x:player.x+20, y:player.y+20, size:10, vx:dir*6, color:player.color, damage:5, owner });
+    }
+
+    let running = true;
+    function gameLoop() { if (!running) return; update(); draw(); requestAnimationFrame(gameLoop); }
+    function stopGame() { running = false; }
+  </script>
+</body>
+</html>
